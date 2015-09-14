@@ -15,10 +15,10 @@
             android:resource="@xml/watch_face" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/ic_launcher" />
+                android:resource="@drawable/screenshot" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/ic_launcher" />
+                android:resource="@drawable/screenshot" />
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category

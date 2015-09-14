@@ -4,11 +4,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -104,23 +108,29 @@ public class WatchFaceService extends CanvasWatchFaceService {
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             /* draw your watch face */
+            canvas.drawColor(Color.TRANSPARENT , PorterDuff.Mode.CLEAR);
 
             System.out.println("Drawing...");
+            //Draw background
+            BitmapFactory factory = new BitmapFactory();
+            Bitmap bitmap = factory.decodeResource(getResources(), R.drawable.background);
+            Bitmap scaled = Bitmap.createScaledBitmap(bitmap, bounds.width(), bounds.height(), false);
+            canvas.drawBitmap(scaled, 0, 0, new Paint(Paint.ANTI_ALIAS_FLAG));
 
             int height = canvas.getHeight();
             int width = canvas.getWidth();
             int centerx = width/2;
             int centery = height/2;
 
-//            currentTime.setToNow();
             calendar.setTime(new Date());
             int mins = calendar.get(Calendar.MINUTE);
             int hours = calendar.get(Calendar.HOUR_OF_DAY);
 
-            canvas.drawColor(Color.TRANSPARENT , PorterDuff.Mode.CLEAR);
             drawTickets(canvas, centerx, centery);
             drawHourHand(canvas, centerx, centery, hours, mins);
             drawMinuteHand(canvas, centerx, centery, mins);
+            drawNumbers(canvas, centerx, centery);
+            drawMiddle(canvas, centerx, centery);
         }
 
         @Override
@@ -170,41 +180,47 @@ public class WatchFaceService extends CanvasWatchFaceService {
         }
 
         private void drawHourHand(Canvas canvas, int centerx, int centery, int hours, int minutes) {
-            int length = 115;
+            int backLength = 15;
+            int length = 115 + backLength;
 
             System.out.println("Hours: " + hours);
             double angle = ((hours + (minutes / 60f)) / 6f ) * (float) Math.PI;
 
             double xVal = Math.sin(angle) * length;
             double yVal = -Math.cos(angle) * length;
+            double backx = Math.sin(angle) * backLength;
+            double backy = -Math.cos(angle) * backLength;
 
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             p.setStrokeWidth(3);
             p.setColor(Color.WHITE);
             p.setShadowLayer(2, 1, 0, Color.BLACK);
-            canvas.drawLine(centerx, centery, (float)(centerx+xVal), (float)(centery+yVal), p);
+            canvas.drawLine((float)(centerx-backx), (float)(centery-backy), (float)(centerx+xVal), (float)(centery+yVal), p);
         }
 
         private void drawMinuteHand(Canvas canvas, int centerx, int centery, int minutes) {
-            int length = 135;
+            int backLength = 20;
+            int length = 135 + backLength;
 
             System.out.println("Minutes: " + minutes);
             double angle = minutes / 30f * (float) Math.PI;
 
             double xVal = Math.sin(angle) * length;
             double yVal = -Math.cos(angle) * length;
+            double backx = Math.sin(angle) * backLength;
+            double backy = -Math.cos(angle) * backLength;
 
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             p.setStrokeWidth(3);
             p.setColor(Color.WHITE);
             p.setShadowLayer(2, 1, 0, Color.BLACK);
-            canvas.drawLine(centerx, centery, (float)(centerx+xVal), (float)(centery+yVal), p);
+            canvas.drawLine((float)(centerx - backx), (float)(centery - backy), (float)(centerx+xVal), (float)(centery+yVal), p);
         }
 
         private void drawTickets(Canvas canvas, int centerx, int centery) {
-            double sinVal = 0, cosVal = 0, angle = 0;
-            float length1 = 0, length2 = 0;
-            float x1 = 0, y1 = 0;
+            double sinVal, cosVal, angle;
+            float length1, length2;
+            float x1, y1, x2, y2;
 
             // draw ticks
             length1 = centerx - 25;
@@ -215,30 +231,73 @@ public class WatchFaceService extends CanvasWatchFaceService {
                 cosVal = Math.cos(angle);
                 float len;
                 if (i % 5 == 0) { //larger tickets
-                    len = length1 + 10;
-                    x1 = (float)(sinVal * len);
-                    y1 = (float)(-cosVal * len);
-
-                    Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    p.setColor(Color.parseColor("#ffffff"));
-                    p.setTextSize(16);
-                    int xoffset, yoffset; //adjust number placement since they're origin is the left/top corner.
-                    xoffset = (i < 10) ? -4 : -8; //number with one digit should not be adjusted as much.
-                    yoffset = 6;
-
-                    canvas.drawText(String.valueOf(i), centerx + x1 + xoffset, centery + y1 + yoffset, p);
-                } else { // smaller tickets
                     len = length1 + 15;
                     x1 = (float)(sinVal * len);
                     y1 = (float)(-cosVal * len);
 
                     Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    p.setColor(Color.parseColor("#ffffff"));
-                    canvas.drawCircle(centerx + x1, centery + y1, 2, p);
+                    p.setColor(Color.parseColor("#aaaaaa"));
+                    p.setTextSize(16);
+                    int xoffset, yoffset; //adjust number placement since they're origin is the left/top corner.
+                    xoffset = (i < 10) ? -4 : -8; //number with one digit should not be adjusted as much.
+                    yoffset = 6;
+//                    canvas.drawText(String.valueOf(i), centerx + x1 + xoffset, centery + y1 + yoffset, p);
+
+                    canvas.drawCircle(centerx + x1, centery + y1, 6, p);
+
+                } else { // smaller tickets
+                    len = length1 + 15;
+                    x1 = (float)(sinVal * len);
+                    y1 = (float)(-cosVal * len);
+                    x2 = (float)(sinVal * length2);
+                    y2 = (float)(-cosVal * length2);
+
+                    Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    p.setColor(Color.parseColor("#5b5b5b"));
+                    p.setStrokeWidth(2);
+                    canvas.drawLine(centerx + x1, centery + y1, centerx + x2, centery + y2, p);
                 }
 
 
             }
+        }
+
+        private void drawNumbers(Canvas canvas, int centerx, int centery) {
+            int len = centerx - 45;
+            double[] angles = {0, 0.25*Math.PI*2, 0.5*Math.PI*2, 0.75*Math.PI*2};
+            double[] sinVals = {Math.sin(angles[0]), Math.sin(angles[1]), Math.sin(angles[2]), Math.sin(angles[3])};
+            double[] cosVals = {Math.cos(angles[0]), Math.cos(angles[1]), Math.cos(angles[2]), Math.cos(angles[3])};
+
+            int textSize = 30;
+            Paint p = new Paint();
+            p.setTextSize(textSize);
+            p.setColor(Color.WHITE);
+            p.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            float x, y;
+            x = (float)(sinVals[0] * len);
+            y = (float)(-cosVals[0] * len);
+            canvas.drawText("12", centerx + x - (textSize/2), centery + y , p);
+
+            x = (float)(sinVals[1] * len);
+            y = (float)(-cosVals[1] * len);
+            canvas.drawText("3", centerx + x + 8, centery + y + 8, p);
+
+            x = (float)(sinVals[2] * len);
+            y = (float)(-cosVals[2] * len);
+            canvas.drawText("6", centerx + x - (textSize/4), centery + y + 20, p);
+
+            x = (float)(sinVals[3] * len);
+            y = (float)(-cosVals[3] * len);
+            canvas.drawText("9", centerx + x - 20, centery + y + 8, p);
+        }
+
+        private void drawMiddle(Canvas canvas, int centerx, int centery) {
+            Paint p = new Paint();
+            p.setColor(Color.WHITE);
+            canvas.drawCircle(centerx, centery, 6, p);
+
+            p.setColor(Color.BLACK);
+            canvas.drawCircle(centerx, centery, 2, p);
         }
     }
 }
