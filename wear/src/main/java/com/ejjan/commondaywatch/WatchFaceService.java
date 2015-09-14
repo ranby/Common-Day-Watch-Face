@@ -12,7 +12,6 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -42,6 +41,17 @@ public class WatchFaceService extends CanvasWatchFaceService {
         private static final long DEFAULT_UPDATE_RATE_MS = 1000*60;
 
         private boolean hasTimeZoneReceiverBeenRegistered = false;
+        private Paint smallTicketsColor;
+        private Paint largeTicketsColor;
+        private Paint specialLargeTicketsColor;
+        private Paint hourHandColor;
+        private Paint minuteHandColor;
+        private Paint numbersColor;
+        private Paint middleColor;
+        private Paint middleDotColor;
+        private Paint dateRectColor;
+        private Paint dateTextColor;
+        private int numbersTextSize = 30;
 
         Calendar calendar;
 
@@ -83,6 +93,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             );
 
             calendar = Calendar.getInstance();
+            setupPaints();
         }
 
         @Override
@@ -125,12 +136,17 @@ public class WatchFaceService extends CanvasWatchFaceService {
             calendar.setTime(new Date());
             int mins = calendar.get(Calendar.MINUTE);
             int hours = calendar.get(Calendar.HOUR_OF_DAY);
+            int day = calendar.get(Calendar.DAY_OF_MONTH);
+            int month = calendar.get(Calendar.MONTH);
 
             drawTickets(canvas, centerx, centery);
+            drawNumbers(canvas, centerx, centery);
+            drawDate(canvas, centerx, centery, day, month);
+
             drawHourHand(canvas, centerx, centery, hours, mins);
             drawMinuteHand(canvas, centerx, centery, mins);
-            drawNumbers(canvas, centerx, centery);
             drawMiddle(canvas, centerx, centery);
+
         }
 
         @Override
@@ -181,7 +197,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
 
         private void drawHourHand(Canvas canvas, int centerx, int centery, int hours, int minutes) {
             int backLength = 15;
-            int length = 115 + backLength;
+            int length = 100 + backLength;
 
             System.out.println("Hours: " + hours);
             double angle = ((hours + (minutes / 60f)) / 6f ) * (float) Math.PI;
@@ -191,16 +207,12 @@ public class WatchFaceService extends CanvasWatchFaceService {
             double backx = Math.sin(angle) * backLength;
             double backy = -Math.cos(angle) * backLength;
 
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setStrokeWidth(3);
-            p.setColor(Color.WHITE);
-            p.setShadowLayer(2, 1, 0, Color.BLACK);
-            canvas.drawLine((float)(centerx-backx), (float)(centery-backy), (float)(centerx+xVal), (float)(centery+yVal), p);
+            canvas.drawLine((float)(centerx-backx), (float)(centery-backy), (float)(centerx+xVal), (float)(centery+yVal), hourHandColor);
         }
 
         private void drawMinuteHand(Canvas canvas, int centerx, int centery, int minutes) {
             int backLength = 20;
-            int length = 135 + backLength;
+            int length = 120 + backLength;
 
             System.out.println("Minutes: " + minutes);
             double angle = minutes / 30f * (float) Math.PI;
@@ -210,11 +222,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             double backx = Math.sin(angle) * backLength;
             double backy = -Math.cos(angle) * backLength;
 
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setStrokeWidth(3);
-            p.setColor(Color.WHITE);
-            p.setShadowLayer(2, 1, 0, Color.BLACK);
-            canvas.drawLine((float)(centerx - backx), (float)(centery - backy), (float)(centerx+xVal), (float)(centery+yVal), p);
+            canvas.drawLine((float)(centerx - backx), (float)(centery - backy), (float)(centerx+xVal), (float)(centery+yVal), minuteHandColor);
         }
 
         private void drawTickets(Canvas canvas, int centerx, int centery) {
@@ -234,16 +242,10 @@ public class WatchFaceService extends CanvasWatchFaceService {
                     len = length1 + 15;
                     x1 = (float)(sinVal * len);
                     y1 = (float)(-cosVal * len);
-
-                    Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    p.setColor(Color.parseColor("#aaaaaa"));
-                    p.setTextSize(16);
-                    int xoffset, yoffset; //adjust number placement since they're origin is the left/top corner.
-                    xoffset = (i < 10) ? -4 : -8; //number with one digit should not be adjusted as much.
-                    yoffset = 6;
-//                    canvas.drawText(String.valueOf(i), centerx + x1 + xoffset, centery + y1 + yoffset, p);
-
-                    canvas.drawCircle(centerx + x1, centery + y1, 6, p);
+                    if (i == 0)
+                        canvas.drawCircle(centerx + x1, centery + y1, 6, specialLargeTicketsColor);
+                    else
+                        canvas.drawCircle(centerx + x1, centery + y1, 6, largeTicketsColor);
 
                 } else { // smaller tickets
                     len = length1 + 15;
@@ -252,10 +254,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
                     x2 = (float)(sinVal * length2);
                     y2 = (float)(-cosVal * length2);
 
-                    Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    p.setColor(Color.parseColor("#5b5b5b"));
-                    p.setStrokeWidth(2);
-                    canvas.drawLine(centerx + x1, centery + y1, centerx + x2, centery + y2, p);
+                    canvas.drawLine(centerx + x1, centery + y1, centerx + x2, centery + y2, smallTicketsColor);
                 }
 
 
@@ -268,36 +267,84 @@ public class WatchFaceService extends CanvasWatchFaceService {
             double[] sinVals = {Math.sin(angles[0]), Math.sin(angles[1]), Math.sin(angles[2]), Math.sin(angles[3])};
             double[] cosVals = {Math.cos(angles[0]), Math.cos(angles[1]), Math.cos(angles[2]), Math.cos(angles[3])};
 
-            int textSize = 30;
-            Paint p = new Paint();
-            p.setTextSize(textSize);
-            p.setColor(Color.WHITE);
-            p.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
             float x, y;
             x = (float)(sinVals[0] * len);
             y = (float)(-cosVals[0] * len);
-            canvas.drawText("12", centerx + x - (textSize/2), centery + y , p);
+            canvas.drawText("12", centerx + x - (numbersTextSize/2), centery + y , numbersColor);
 
             x = (float)(sinVals[1] * len);
             y = (float)(-cosVals[1] * len);
-            canvas.drawText("3", centerx + x + 8, centery + y + 8, p);
+            canvas.drawText("3", centerx + x + 6, centery + y + 10, numbersColor);
 
             x = (float)(sinVals[2] * len);
             y = (float)(-cosVals[2] * len);
-            canvas.drawText("6", centerx + x - (textSize/4), centery + y + 20, p);
+            canvas.drawText("6", centerx + x - (numbersTextSize/4), centery + y + 20, numbersColor);
 
             x = (float)(sinVals[3] * len);
             y = (float)(-cosVals[3] * len);
-            canvas.drawText("9", centerx + x - 20, centery + y + 8, p);
+            canvas.drawText("9", centerx + x - 20, centery + y + 10, numbersColor);
         }
 
         private void drawMiddle(Canvas canvas, int centerx, int centery) {
-            Paint p = new Paint();
-            p.setColor(Color.WHITE);
-            canvas.drawCircle(centerx, centery, 6, p);
+            canvas.drawCircle(centerx, centery, 6, middleColor);
+            canvas.drawCircle(centerx, centery, 2, middleDotColor);
+        }
 
-            p.setColor(Color.BLACK);
-            canvas.drawCircle(centerx, centery, 2, p);
+        private void drawDate(Canvas canvas, int centerx, int centery, int dayOfMonth, int month) {
+            int height = 25;
+            int width = 75;
+            int left = centerx + (centerx/2) - (width/2) - 10;
+            int right = centerx + (centerx/2) + (width/2) - 10;
+            int top = centery - (height/2);
+            int bot = centery + (height/2);
+            Rect rect = new Rect(left, top, right, bot);
+            canvas.drawRect(rect, dateRectColor);
+
+            String[] monthNames = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+            canvas.drawText(String.valueOf(dayOfMonth) +" "+ monthNames[month], (float)(centerx + (centerx/2) - (width/2) - 5), (float)(centery + 7), dateTextColor);
+        }
+
+        private void setupPaints() {
+            hourHandColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            hourHandColor.setStrokeWidth(3);
+            hourHandColor.setColor(Color.WHITE);
+            hourHandColor.setShadowLayer(2, 1, 0, Color.BLACK);
+
+            minuteHandColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            minuteHandColor.setStrokeWidth(3);
+            minuteHandColor.setColor(Color.WHITE);
+            minuteHandColor.setShadowLayer(2, 1, 0, Color.BLACK);
+
+            largeTicketsColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            largeTicketsColor.setColor(Color.parseColor("#cbcbcb"));
+            specialLargeTicketsColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            specialLargeTicketsColor.setColor(Color.parseColor("#A30006"));
+
+            smallTicketsColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            smallTicketsColor.setColor(Color.parseColor("#929292"));
+            smallTicketsColor.setStrokeWidth(2);
+
+            numbersColor = new Paint();
+            numbersColor.setTextSize(numbersTextSize);
+            numbersColor.setColor(Color.parseColor("#cbcbcb"));
+            numbersColor.setShadowLayer(2, 2, 0, Color.BLACK);
+            numbersColor.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+
+            middleColor = new Paint();
+            middleColor.setColor(Color.WHITE);
+            middleDotColor = new Paint();
+            middleDotColor.setColor(Color.BLACK);
+
+            dateRectColor = new Paint();
+            dateRectColor.setStyle(Paint.Style.STROKE);
+            dateRectColor.setColor(Color.parseColor("#A30006"));
+            dateRectColor.setShadowLayer(2, .25f, .25f, Color.BLACK);
+            dateRectColor.setStrokeWidth(1.75f);
+
+            dateTextColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            dateTextColor.setColor(Color.parseColor("#cbcbcb"));
+            dateTextColor.setShadowLayer(2, .75f, .75f, Color.BLACK);
+            dateTextColor.setTextSize(20);
         }
     }
 }
