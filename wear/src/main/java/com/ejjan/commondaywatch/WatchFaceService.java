@@ -12,6 +12,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -39,6 +40,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
 
         private static final int MSG_UPDATE_TIME = 42;
         private static final long DEFAULT_UPDATE_RATE_MS = 1000*60;
+        private int batteryLevel = 80;
 
         private boolean hasTimeZoneReceiverBeenRegistered = false;
         private Paint smallTicketsColor;
@@ -51,7 +53,12 @@ public class WatchFaceService extends CanvasWatchFaceService {
         private Paint middleDotColor;
         private Paint dateRectColor;
         private Paint dateTextColor;
+        private Paint batteryFullColor;
+        private Paint batteryEmptyColor;
         private int numbersTextSize = 30;
+
+        private Bitmap backgroundBitmap;
+        private Bitmap batteryBitmap;
 
         Calendar calendar;
 
@@ -81,6 +88,15 @@ public class WatchFaceService extends CanvasWatchFaceService {
             }
         };
 
+        private BroadcastReceiver batteryInfoReceiver = new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context arg0, Intent intent) {
+                batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                System.out.println("battery changed to : " + batteryLevel + "%");
+                invalidate();
+            }
+        };
+
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
@@ -91,9 +107,18 @@ public class WatchFaceService extends CanvasWatchFaceService {
                             .setShowSystemUiTime( false )
                             .build()
             );
+            WatchFaceService.this.registerReceiver(batteryInfoReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
             calendar = Calendar.getInstance();
             setupPaints();
+        }
+
+        @Override
+        public void onSurfaceChanged (SurfaceHolder holder, int format, int width, int height) {
+            BitmapFactory factory = new BitmapFactory();
+            Bitmap bitmap = factory.decodeResource(getResources(), R.drawable.background);
+            backgroundBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
+
         }
 
         @Override
@@ -121,12 +146,8 @@ public class WatchFaceService extends CanvasWatchFaceService {
             /* draw your watch face */
             canvas.drawColor(Color.TRANSPARENT , PorterDuff.Mode.CLEAR);
 
-            System.out.println("Drawing...");
-            //Draw background
-            BitmapFactory factory = new BitmapFactory();
-            Bitmap bitmap = factory.decodeResource(getResources(), R.drawable.background);
-            Bitmap scaled = Bitmap.createScaledBitmap(bitmap, bounds.width(), bounds.height(), false);
-            canvas.drawBitmap(scaled, 0, 0, new Paint(Paint.ANTI_ALIAS_FLAG));
+                //Draw background
+            canvas.drawBitmap(backgroundBitmap, 0, 0, new Paint(Paint.ANTI_ALIAS_FLAG));
 
             int height = canvas.getHeight();
             int width = canvas.getWidth();
@@ -142,6 +163,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             drawTickets(canvas, centerx, centery);
             drawNumbers(canvas, centerx, centery);
             drawDate(canvas, centerx, centery, day, month);
+            drawBattery(canvas, centerx, centery, batteryLevel);
 
             drawHourHand(canvas, centerx, centery, hours, mins);
             drawMinuteHand(canvas, centerx, centery, mins);
@@ -304,6 +326,21 @@ public class WatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(String.valueOf(dayOfMonth) +" "+ monthNames[month], (float)(centerx + (centerx/2) - (width/2) - 5), (float)(centery + 7), dateTextColor);
         }
 
+        private void drawBattery(Canvas canvas, int centerx, int centery, int batteryLevel) {
+            int width = 75;
+            float batteryPart = batteryLevel/100f;
+            int leftEnd = centerx - (centerx/2) - (width/2) + 10;
+            int rightEnd = centerx - (centerx/2) + (width/2) + 10;
+            float batteryEnd = rightEnd - (width * batteryPart);
+
+            canvas.drawLine(leftEnd, centery - 4, leftEnd, centerx + 4, batteryEmptyColor);
+            canvas.drawLine(batteryEnd, centery, leftEnd, centery, batteryEmptyColor);
+
+            canvas.drawLine(batteryEnd, centery - 4, batteryEnd, centery + 4, batteryFullColor);
+            canvas.drawLine(rightEnd, centery, batteryEnd, centery, batteryFullColor);
+            canvas.drawLine(rightEnd, centery - 4, rightEnd, centery + 4, batteryFullColor);
+        }
+
         private void setupPaints() {
             hourHandColor = new Paint(Paint.ANTI_ALIAS_FLAG);
             hourHandColor.setStrokeWidth(3);
@@ -345,6 +382,16 @@ public class WatchFaceService extends CanvasWatchFaceService {
             dateTextColor.setColor(Color.parseColor("#cbcbcb"));
             dateTextColor.setShadowLayer(2, .75f, .75f, Color.BLACK);
             dateTextColor.setTextSize(20);
+
+            batteryFullColor = new Paint();
+            batteryFullColor.setColor(Color.parseColor("#A30006"));
+            batteryFullColor.setStrokeWidth(2);
+            batteryFullColor.setShadowLayer(2, -.5f, .5f, Color.BLACK);
+
+            batteryEmptyColor = new Paint();
+            batteryEmptyColor.setColor(Color.parseColor("#cbcbcb"));
+            batteryEmptyColor.setStrokeWidth(1.5f);
+
         }
     }
 }
