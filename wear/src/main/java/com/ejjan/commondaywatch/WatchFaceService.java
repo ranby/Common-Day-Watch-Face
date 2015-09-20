@@ -58,7 +58,6 @@ public class WatchFaceService extends CanvasWatchFaceService {
         private int numbersTextSize = 30;
 
         private Bitmap backgroundBitmap;
-        private Bitmap batteryBitmap;
 
         Calendar calendar;
 
@@ -103,7 +102,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             /* initialize your watch face */
             setWatchFaceStyle( new WatchFaceStyle.Builder( WatchFaceService.this )
                             .setBackgroundVisibility( WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE )
-                            .setCardPeekMode( WatchFaceStyle.PEEK_MODE_VARIABLE )
+                            .setCardPeekMode( WatchFaceStyle.PEEK_MODE_SHORT )
                             .setShowSystemUiTime( false )
                             .build()
             );
