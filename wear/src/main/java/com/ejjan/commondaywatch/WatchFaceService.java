@@ -304,7 +304,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
                     y1 = (float)(-cosVal * len);
                     if (i == 0)
                         canvas.drawCircle(centerx + x1, centery + y1, 6, specialLargeTicketsColor);
-                    else if (i >= 25 && i <= 35) {
+                    else if (chinSize > 0 && i >= 25 && i <= 35) {
                         canvas.drawCircle(centerx + x1, (2*centery) - chinSize - 10, 6, largeTicketsColor);
                     }
                     else
