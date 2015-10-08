@@ -19,6 +19,7 @@ import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.view.SurfaceHolder;
+import android.view.WindowInsets;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -39,7 +40,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
     private class Engine extends CanvasWatchFaceService.Engine {
 
         private static final int MSG_UPDATE_TIME = 42;
-        private static final long DEFAULT_UPDATE_RATE_MS = 1000*60;
+        private static final long DEFAULT_UPDATE_RATE_MS = 1000;
         private int batteryLevel = 80;
 
         private boolean hasTimeZoneReceiverBeenRegistered = false;
@@ -48,6 +49,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
         private Paint specialLargeTicketsColor;
         private Paint hourHandColor;
         private Paint minuteHandColor;
+        private Paint secondHandColor;
         private Paint numbersColor;
         private Paint middleColor;
         private Paint middleDotColor;
@@ -58,6 +60,8 @@ public class WatchFaceService extends CanvasWatchFaceService {
         private int numbersTextSize = 30;
 
         private Bitmap backgroundBitmap;
+
+        private int chinSize = 0;
 
         Calendar calendar;
 
@@ -138,6 +142,22 @@ public class WatchFaceService extends CanvasWatchFaceService {
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             /* the wearable switched between modes */
+
+            invalidate();
+            updateTimer();
+
+        }
+
+        @Override
+        public void onApplyWindowInsets(WindowInsets insets) {
+            super.onApplyWindowInsets(insets);
+            boolean isRound = insets.isRound();
+            chinSize = insets.getSystemWindowInsetBottom();
+
+            if (isRound) {
+                System.out.println("Chin size: " + chinSize);
+
+            }
         }
 
         @Override
@@ -145,7 +165,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             /* draw your watch face */
             canvas.drawColor(Color.TRANSPARENT , PorterDuff.Mode.CLEAR);
 
-                //Draw background
+            //Draw background
             canvas.drawBitmap(backgroundBitmap, 0, 0, new Paint(Paint.ANTI_ALIAS_FLAG));
 
             int height = canvas.getHeight();
@@ -158,6 +178,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
             int hours = calendar.get(Calendar.HOUR_OF_DAY);
             int day = calendar.get(Calendar.DAY_OF_MONTH);
             int month = calendar.get(Calendar.MONTH);
+            int secs = calendar.get(Calendar.SECOND);
 
             drawTickets(canvas, centerx, centery);
             drawNumbers(canvas, centerx, centery);
@@ -166,6 +187,9 @@ public class WatchFaceService extends CanvasWatchFaceService {
 
             drawHourHand(canvas, centerx, centery, hours, mins);
             drawMinuteHand(canvas, centerx, centery, mins);
+            if (!isInAmbientMode()) {
+                drawSecondHand(canvas, centerx, centery, secs);
+            }
             drawMiddle(canvas, centerx, centery);
 
         }
@@ -246,6 +270,21 @@ public class WatchFaceService extends CanvasWatchFaceService {
             canvas.drawLine((float)(centerx - backx), (float)(centery - backy), (float)(centerx+xVal), (float)(centery+yVal), minuteHandColor);
         }
 
+        private void drawSecondHand(Canvas canvas, int centerx, int centery, int seconds) {
+            int backLength = 25;
+            int length = 120 + backLength;
+
+            System.out.println("Seconds: " + seconds);
+            double angle = seconds / 30f * (float) Math.PI;
+
+            double xVal = Math.sin(angle) * length;
+            double yVal = -Math.cos(angle) * length;
+            double backx = Math.sin(angle) * backLength;
+            double backy = -Math.cos(angle) * backLength;
+
+            canvas.drawLine((float)(centerx - backx), (float)(centery - backy), (float)(centerx + xVal), (float)(centery + yVal), secondHandColor);
+        }
+
         private void drawTickets(Canvas canvas, int centerx, int centery) {
             double sinVal, cosVal, angle;
             float length1, length2;
@@ -265,6 +304,9 @@ public class WatchFaceService extends CanvasWatchFaceService {
                     y1 = (float)(-cosVal * len);
                     if (i == 0)
                         canvas.drawCircle(centerx + x1, centery + y1, 6, specialLargeTicketsColor);
+                    else if (i >= 25 && i <= 35) {
+                        canvas.drawCircle(centerx + x1, (2*centery) - chinSize - 10, 6, largeTicketsColor);
+                    }
                     else
                         canvas.drawCircle(centerx + x1, centery + y1, 6, largeTicketsColor);
 
@@ -299,7 +341,7 @@ public class WatchFaceService extends CanvasWatchFaceService {
 
             x = (float)(sinVals[2] * len);
             y = (float)(-cosVals[2] * len);
-            canvas.drawText("6", centerx + x - (numbersTextSize/4), centery + y + 20, numbersColor);
+            canvas.drawText("6", centerx + x - (numbersTextSize/4), centery + y + 20 - chinSize, numbersColor);
 
             x = (float)(sinVals[3] * len);
             y = (float)(-cosVals[3] * len);
@@ -349,7 +391,12 @@ public class WatchFaceService extends CanvasWatchFaceService {
             minuteHandColor = new Paint(Paint.ANTI_ALIAS_FLAG);
             minuteHandColor.setStrokeWidth(3);
             minuteHandColor.setColor(Color.WHITE);
-            minuteHandColor.setShadowLayer(2, 1, 0, Color.BLACK);
+            minuteHandColor.setShadowLayer(1.5f, 0.5f, 0.5f, Color.BLACK);
+
+            secondHandColor = new Paint(Paint.ANTI_ALIAS_FLAG);
+            secondHandColor.setStrokeWidth(2);
+            secondHandColor.setColor(Color.parseColor("#DA0008"));
+            secondHandColor.setShadowLayer(2, 1, 0, Color.BLACK);
 
             largeTicketsColor = new Paint(Paint.ANTI_ALIAS_FLAG);
             largeTicketsColor.setColor(Color.parseColor("#cbcbcb"));
